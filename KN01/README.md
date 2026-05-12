@@ -7,7 +7,8 @@
 docker version
 ```
 
-> Screenshots: `getting_started.png`, `docker_desktop.png`
+![Getting Started](getting_started.png)
+![Docker Desktop](docker_desktop.png)
 
 ---
 
@@ -41,7 +42,7 @@ Zusammen ermöglichen sie, direkt mit dem Container zu interagieren, als ob man 
 
 ### 6 — Nginx läuft
 
-> Screenshot: `running_nginx.png`
+![Nginx läuft](running_nginx.png)
 
 ---
 
@@ -51,13 +52,13 @@ Zusammen ermöglichen sie, direkt mit dem Container zu interagieren, als ob man 
 docker ps -a
 ```
 
-> Screenshot: `status.png`
+![Container Status](status.png)
 
 ---
 
 ## C — Docker Hub Repository (leer)
 
-> Screenshot: `empty_repo.png`
+![Docker Hub leeres Repository](empty_repo.png)
 
 ---
 
@@ -111,4 +112,4 @@ Status: Downloaded newer image for mariadb:latest
 mariadb: digest: sha256:e2f828874615bf3910d733e1b3b7570c25e6491de74b9270ec29a613c85a030c size: 2480
 ```
 
-> Screenshot: `tags.png`
+![Docker Hub Tags](tags.png)
