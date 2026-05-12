@@ -16,6 +16,8 @@ docker version
 
 ### 3 & 4 — Wichtige Flags
 
+![Nginx](nginx.png)
+
 | Flag | Bedeutung |
 |------|-----------|
 | `docker run -d` | **Detached mode** — startet den Container im Hintergrund, das Terminal bleibt frei |
