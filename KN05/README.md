@@ -47,7 +47,7 @@ docker exec kn05a-nginx bash /host/ausgabe.sh
 
 > Hinweis: `$(pwd)` liefert den absoluten Pfad des aktuellen Ordners – nötig, weil Bind Mounts einen absoluten Host-Pfad brauchen.
 
-**Screencast:** `kn05ab_screencast.mov` – zeigt den ganzen Ablauf (Teil A und B in einer Aufnahme): Skript Version 1 im Container, Änderung auf dem Host, Version 2 im Container.
+**Screencast:** `kn05a_screencast.mov` – zeigt: Skript Version 1 im Container, Änderung auf dem Host, Version 2 im Container (ohne Container-Neustart).
 
 ## B) Volumes
 
@@ -82,7 +82,7 @@ docker exec kn05b-c1 cat /data/shared.txt
 
 `cat /data/shared.txt` zeigt am Ende auf **beiden** Seiten beide Zeilen – das Volume wird geteilt.
 
-**Screencast:** `kn05ab_screencast.mov` (gleiche Aufnahme wie Teil A, zeigt anschliessend das geteilte Volume).
+**Screencast:** `kn05b_screencast.mov` (zeigt das geteilte Volume: beide Container schreiben und lesen dieselbe Datei).
 
 ## C) Speicher mit docker compose
 
@@ -157,6 +157,7 @@ tmpfs on /cache type tmpfs (rw,nosuid,nodev,noexec,relatime)
 - Auszug `mount` erster Container (siehe oben).
 - Auszug `mount` zweiter Container (siehe oben).
 - docker compose Datei: `c/docker-compose.yml`.
+- Zusätzlicher Beleg-Screencast: `kn05c_screencast.mov` (zeigt `compose up` und beide `mount`-Ausgaben live).
 
 ## Aufräumen
 
