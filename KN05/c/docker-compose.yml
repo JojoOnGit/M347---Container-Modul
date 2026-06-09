@@ -1,0 +1,22 @@
+services:
+  web1:
+    image: nginx
+    container_name: kn05c-web1
+    volumes:
+      - type: volume
+        source: kn05c-data
+        target: /data
+      - type: bind
+        source: ./bind
+        target: /host
+      - type: tmpfs
+        target: /cache
+
+  web2:
+    image: nginx
+    container_name: kn05c-web2
+    volumes:
+      - kn05c-data:/data
+
+volumes:
+  kn05c-data:
