@@ -1,0 +1,18 @@
+M347 KN06 / KN07 - MicroK8s Cluster (AWS EC2, us-east-1)
+
+Instanztyp: t3.medium (2 vCPU, 4 GB RAM), 30 GB gp3, Ubuntu 22.04 LTS
+Security Group: kn06-microk8s (sg-03ca80f8a073abdd1)
+  - 22/tcp von 0.0.0.0/0 (SSH)
+  - 16443/tcp von 0.0.0.0/0 (Kubernetes API)
+  - alles untereinander (self-referencing) fuer die Cluster-Kommunikation
+SSH-Key: ~/.ssh/id_ed25519  (User: ubuntu)
+
+Endzustand: 1 Master + 2 Worker (HA: no, einziger datastore master = node1)
+
+Node    Rolle    Instance-ID            Public (EIP, statisch)  Private IP        Hostname
+node1   Master   i-0649b89842ea05de0    52.44.8.195             172.31.24.232     ip-172-31-24-232
+node2   Worker   i-0e985efda71cfd7bb    44.222.8.242            172.31.25.33      ip-172-31-25-33
+node3   Worker   i-0f1df51f55d227341    35.168.196.215          172.31.17.116     ip-172-31-17-116
+
+SSH-Beispiel:
+  ssh -i ~/.ssh/id_ed25519 ubuntu@52.44.8.195
