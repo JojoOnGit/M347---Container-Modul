@@ -1,4 +1,4 @@
-# M347 – Zusammenfassung (KN01–KN05)
+# M347 – Zusammenfassung (KN01–KN06)
 
 Kompakte Übersicht aller bisherigen Aufträge: wichtigste Befehle, Konzepte und Stolpersteine.
 
@@ -196,6 +196,46 @@ docker exec web1 mount | grep -E "on /(data|host|cache) "   # zeigt alle drei Ty
 
 ---
 
+## KN06 – Kubernetes I (MicroK8s-Cluster)
+
+Vom einzelnen Docker-Host zum **Cluster** aus mehreren Servern. **MicroK8s** ist eine schlanke Kubernetes-Variante; drei Ubuntu-EC2-Instanzen (2 vCPU / 4 GB / 30 GB) wurden per Cloud-Init (`snap install microk8s`) aufgesetzt und zu einem Cluster verbunden.
+
+**Zwei Werkzeuge – nicht verwechseln:**
+
+| Befehl | Wofür |
+|--------|-------|
+| `microk8s …` | den **Cluster betreiben/administrieren**: `add-node`, `join`, `leave`, `remove-node`, `status`, `start/stop`, `enable <addon>` |
+| `microk8s kubectl …` | **im Cluster arbeiten** (Standard-Kubernetes): `get nodes`, Pods/Deployments/Services verwalten |
+
+**Cluster bilden:**
+```bash
+# auf dem Master einen Einmal-Token erzeugen:
+microk8s add-node
+# -> microk8s join <MASTER-IP>:25000/<token>/<hash>
+
+# auf dem neuen Node ausführen (ohne Flag = Control-Plane, mit --worker = nur Worker):
+microk8s join <MASTER-IP>:25000/<token>/<hash>
+microk8s join <MASTER-IP>:25000/<token>/<hash> --worker
+```
+
+**Node entfernen (2 Schritte):**
+```bash
+microk8s leave                         # auf dem zu entfernenden Node
+microk8s remove-node <node-name>       # danach auf dem Master
+```
+
+**Hochverfügbarkeit (HA) verstehen** – erste Zeilen von `microk8s status`:
+```
+high-availability: yes
+  datastore master nodes: …   # halten die verteilte DB (dqlite) und stimmen mit (Quorum)
+  datastore standby nodes: …  # Reserve, rücken bei Ausfall nach
+```
+- HA schaltet sich **automatisch ab 3 Control-Plane-Nodes** ein → verträgt den Ausfall **eines** Nodes (Mehrheit 2 von 3).
+- Ein **Worker** läuft **ohne** Control-Plane/dqlite (nur kubelet). Sinken die Control-Plane-Nodes unter 3, wird `high-availability: no`.
+- **Stolperstein:** `microk8s kubectl get nodes` auf einem **Worker** liefert keine Liste, sondern *„use the microk8s kubectl on the master"* – der Worker hat keinen API-Server.
+
+---
+
 ## Merksätze fürs Schnell-Nachschauen
 
 - **`-p` fehlt → Container nicht erreichbar.**
@@ -205,3 +245,5 @@ docker exec web1 mount | grep -E "on /(data|host|cache) "   # zeigt alle drei Ty
 - **Bind Mount = Host-Pfad** (Entwicklung), **Volume = Docker-verwaltet** (Daten), **tmpfs = RAM** (flüchtig).
 - **`-v /pfad:...` = Bind**, **`-v name:...` = Volume.**
 - **Compose:** `up -d --build` starten, `down` aufräumen, Top-Level `volumes:`/`networks:` definieren.
+- **K8s:** `microk8s` = Cluster administrieren, **`microk8s kubectl`** = im Cluster arbeiten.
+- **HA braucht ≥ 3 Control-Plane-Nodes**; `--worker` = ohne Control-Plane; Worker kann `get nodes` nicht selbst beantworten.
