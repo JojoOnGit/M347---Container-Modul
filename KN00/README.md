@@ -1,4 +1,4 @@
-# M347 – Zusammenfassung (KN01–KN06)
+# M347 – Zusammenfassung (KN01–KN07)
 
 Kompakte Übersicht aller bisherigen Aufträge: wichtigste Befehle, Konzepte und Stolpersteine.
 
@@ -236,6 +236,40 @@ high-availability: yes
 
 ---
 
+## KN07 – Kubernetes II (Demo-Projekt)
+
+WebApp (`nanajanashia/k8s-demo-app`) + MongoDB auf dem Cluster, gesteuert über **vier YAML-Objekte**: ConfigMap, Secret, Deployment+Service (MongoDB), Deployment+Service (WebApp). Reihenfolge beim Anwenden: ConfigMap/Secret → DB → WebApp.
+
+```bash
+microk8s kubectl apply -f mongo-config.yaml -f mongo-secret.yaml
+microk8s kubectl apply -f mongo.yaml
+microk8s kubectl apply -f webapp.yaml
+microk8s kubectl get all -o wide                 # Kontrolle
+microk8s kubectl describe service webapp-service # Details eines Service
+```
+
+**Die wichtigsten Begriffe (eigene Worte):**
+
+| Begriff | Kurz |
+|---------|------|
+| **Pod** | kleinste Einheit, Hülle um Container, vergänglich |
+| **Replica** | Anzahl identischer Pod-Kopien (`replicas`) → Skalierung/Ausfallsicherheit |
+| **Deployment** | hält Pods am Leben (erstellt, skaliert, Updates/Rollback) |
+| **Service** | stabile Adresse + DNS-Name vor den Pods, Load-Balancing |
+| **Ingress** | **ein** HTTP(S)-Eintrittspunkt, Routing nach Host/Pfad, zentrales TLS |
+| **StatefulSet** | für stateful Apps: feste Identität + eigener persistenter Speicher pro Pod (z. B. Kafka) |
+
+**Service-Typen (entscheidend für Erreichbarkeit):**
+- **ClusterIP** (Default) = **nur clusterintern** (so ist die MongoDB konfiguriert → von aussen nicht erreichbar, z. B. mit Compass).
+- **NodePort** = auf **jedem Node** unter `<node-ip>:<nodePort>` von aussen erreichbar (so die WebApp, Port 30100). Firewall/Security-Group-Port muss offen sein.
+
+**Konzepte aus dem Demo (Stolpersteine):**
+- **DB als Deployment statt StatefulSet**: im Demo bewusst vereinfacht – ohne PersistentVolume sind die Daten bei Pod-Neustart weg; korrekt wäre StatefulSet + PV.
+- **DNS = Service-Name**: in der ConfigMap ist `mongo-url: mongo-service`, weil der DNS-Name eines Service **exakt dessen `metadata.name`** ist (keine feste IP).
+- **`replicas` ändern**: Wert in der YAML anpassen + `kubectl apply` → `describe service` zeigt danach **mehrere `Endpoints`** (eine IP pro Pod) statt einer.
+
+---
+
 ## Merksätze fürs Schnell-Nachschauen
 
 - **`-p` fehlt → Container nicht erreichbar.**
@@ -247,3 +281,6 @@ high-availability: yes
 - **Compose:** `up -d --build` starten, `down` aufräumen, Top-Level `volumes:`/`networks:` definieren.
 - **K8s:** `microk8s` = Cluster administrieren, **`microk8s kubectl`** = im Cluster arbeiten.
 - **HA braucht ≥ 3 Control-Plane-Nodes**; `--worker` = ohne Control-Plane; Worker kann `get nodes` nicht selbst beantworten.
+- **ClusterIP = nur intern, NodePort = von aussen** (`<node-ip>:<nodePort>`, Firewall öffnen).
+- **Service-Name = interner DNS-Name**; **`replicas`** = Anzahl Pod-Kopien (mehr Replicas → mehr `Endpoints`).
+- **DB gehört in ein StatefulSet + PersistentVolume** (im Demo vereinfacht als Deployment).
