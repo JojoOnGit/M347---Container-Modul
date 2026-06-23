@@ -1,0 +1,42 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sendreceive-deployment
+  namespace: kn08
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: sendreceive
+  template:
+    metadata:
+      labels:
+        app: sendreceive
+    spec:
+      imagePullSecrets:
+        - name: ecr-cred
+      containers:
+        - name: sendreceive
+          image: 728126375725.dkr.ecr.us-east-1.amazonaws.com/kn08-sendreceive:v1
+          ports:
+            - containerPort: 8003
+          env:
+            - name: ACCOUNT_BASE_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: app-config
+                  key: ACCOUNT_BASE_URL
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: sendreceive-service
+  namespace: kn08
+spec:
+  type: NodePort
+  selector:
+    app: sendreceive
+  ports:
+    - port: 8003
+      targetPort: 8003
+      nodePort: 30803

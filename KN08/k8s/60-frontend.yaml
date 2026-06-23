@@ -1,0 +1,62 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: frontend-deployment
+  namespace: kn08
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: frontend
+  template:
+    metadata:
+      labels:
+        app: frontend
+    spec:
+      imagePullSecrets:
+        - name: ecr-cred
+      containers:
+        - name: frontend
+          image: 728126375725.dkr.ecr.us-east-1.amazonaws.com/kn08-frontend:v2
+          ports:
+            - containerPort: 80
+          env:
+            - name: FRONTEND_MS_ACCOUNT_HOLDINGS
+              valueFrom:
+                configMapKeyRef:
+                  name: app-config
+                  key: FRONTEND_MS_ACCOUNT_HOLDINGS
+            - name: FRONTEND_MS_ACCOUNT_FRIENDS
+              valueFrom:
+                configMapKeyRef:
+                  name: app-config
+                  key: FRONTEND_MS_ACCOUNT_FRIENDS
+            - name: FRONTEND_MS_BUYSELL_BUY
+              valueFrom:
+                configMapKeyRef:
+                  name: app-config
+                  key: FRONTEND_MS_BUYSELL_BUY
+            - name: FRONTEND_MS_BUYSELL_SELL
+              valueFrom:
+                configMapKeyRef:
+                  name: app-config
+                  key: FRONTEND_MS_BUYSELL_SELL
+            - name: FRONTEND_MS_SENDRECEIVE_SEND
+              valueFrom:
+                configMapKeyRef:
+                  name: app-config
+                  key: FRONTEND_MS_SENDRECEIVE_SEND
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: frontend-service
+  namespace: kn08
+spec:
+  type: NodePort
+  selector:
+    app: frontend
+  ports:
+    - port: 80
+      targetPort: 80
+      nodePort: 30080

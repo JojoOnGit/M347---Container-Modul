@@ -1,0 +1,12 @@
+{
+  "name": "buysell",
+  "version": "1.0.0",
+  "description": "BuySell microservice for the M347 tbzCoin crypto app",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.21.2"
+  }
+}

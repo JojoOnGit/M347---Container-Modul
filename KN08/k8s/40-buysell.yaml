@@ -1,0 +1,42 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: buysell-deployment
+  namespace: kn08
+spec:
+  replicas: 3
+  selector:
+    matchLabels:
+      app: buysell
+  template:
+    metadata:
+      labels:
+        app: buysell
+    spec:
+      imagePullSecrets:
+        - name: ecr-cred
+      containers:
+        - name: buysell
+          image: 728126375725.dkr.ecr.us-east-1.amazonaws.com/kn08-buysell:v1
+          ports:
+            - containerPort: 8002
+          env:
+            - name: ACCOUNT_BASE_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: app-config
+                  key: ACCOUNT_BASE_URL
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: buysell-service
+  namespace: kn08
+spec:
+  type: NodePort
+  selector:
+    app: buysell
+  ports:
+    - port: 8002
+      targetPort: 8002
+      nodePort: 30802

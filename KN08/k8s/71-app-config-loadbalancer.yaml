@@ -1,0 +1,16 @@
+# Task 10: once the AWS Network Load Balancer is in front of the cluster, the
+# browser-facing URLs point at the LB DNS name instead of a single node IP, so
+# the app no longer depends on one specific instance staying up.
+# __LB_DNS__ is replaced at deploy time with the NLB DNS name.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: app-config
+  namespace: kn08
+data:
+  ACCOUNT_BASE_URL: "http://account-service:8080"
+  FRONTEND_MS_ACCOUNT_HOLDINGS: "http://__LB_DNS__:8080/Account/Cryptos/?userId=<userId>"
+  FRONTEND_MS_ACCOUNT_FRIENDS: "http://__LB_DNS__:8080/Account/Friends/?userId=<userId>"
+  FRONTEND_MS_BUYSELL_BUY: "http://__LB_DNS__:8002/buy"
+  FRONTEND_MS_BUYSELL_SELL: "http://__LB_DNS__:8002/sell"
+  FRONTEND_MS_SENDRECEIVE_SEND: "http://__LB_DNS__:8003/send"

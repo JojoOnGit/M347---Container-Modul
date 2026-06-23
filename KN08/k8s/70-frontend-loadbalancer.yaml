@@ -1,0 +1,20 @@
+# Task 10: the frontend Service changed from NodePort to LoadBalancer.
+#
+# This cluster is a self-managed MicroK8s install (no AWS cloud-controller-
+# manager), so Kubernetes itself cannot auto-provision an AWS ELB and the
+# EXTERNAL-IP stays <pending>. The external load balancer is therefore created
+# directly in AWS (an internet-facing Network Load Balancer, see README task 10)
+# whose listeners forward to the NodePorts that this Service still exposes.
+apiVersion: v1
+kind: Service
+metadata:
+  name: frontend-service
+  namespace: kn08
+spec:
+  type: LoadBalancer
+  selector:
+    app: frontend
+  ports:
+    - port: 80
+      targetPort: 80
+      nodePort: 30080
