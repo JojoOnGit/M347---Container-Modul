@@ -1,6 +1,6 @@
-# M347 – Zusammenfassung (KN01–KN07)
+# M347 – Zusammenfassung (KN01–KN08)
 
-Kompakte Übersicht aller bisherigen Aufträge: wichtigste Befehle, Konzepte und Stolpersteine.
+Kompakte Übersicht aller Aufträge: wichtigste Befehle, Konzepte und Stolpersteine.
 
 ---
 
@@ -270,6 +270,91 @@ microk8s kubectl describe service webapp-service # Details eines Service
 
 ---
 
+## KN08 – Kubernetes III (Microservices)
+
+Eine **Microservice-Applikation** (`tbzCoin`-Crypto-App) mit **4 Services** auf dem Cluster. Alles Gelernte kommt zusammen: eigene Komponenten entwickeln, containerisieren, in K8s deployen, updaten.
+
+| Service | Rolle | Service-Typ |
+|---------|-------|-------------|
+| **frontend** | React-UI, ruft die anderen **vom Browser aus** auf | NodePort → LoadBalancer |
+| **account** | **einziger** mit DB-Zugriff (Holdings & Friends) | NodePort |
+| **BuySell** | kaufen/verkaufen, ruft account auf | NodePort |
+| **SendReceive** | an Freunde senden, ruft account auf | NodePort |
+
+**Architektur-Regeln:** Nur **ein** Service spricht mit der DB (account); die anderen rufen ihn per **HTTP-API** auf. Guthaben/Freund-Prüfung passiert via API-Request, kein Log – nur Totals aktualisieren.
+
+### Kubernetes-Objekte (ConfigMap + Secret + Service + Deployment)
+
+Pro Service ein **Deployment** mit **3 Replicas** + ein **Service**. Konfiguration kommt **von aussen** (nichts hardcodiert):
+- **ConfigMap** = nicht-geheime Config (z. B. URLs: `ACCOUNT_BASE_URL`, die `FRONTEND_MS_*`-Endpoints).
+- **Secret** = geheime Daten (DB-ConnectionString). Wird als **ENV-Variable** in den Container gegeben.
+
+```bash
+# Pull-Secret für eine private Registry (damit der Cluster Images ziehen darf):
+kubectl create secret docker-registry ecr-cred -n kn08 \
+  --docker-server=<registry> --docker-username=AWS \
+  --docker-password="$(aws ecr get-login-password)"
+
+kubectl apply -f k8s/               # alle Manifeste anwenden
+kubectl get all -n kn08             # Kontrolle: 4×3 = 12 Pods
+```
+
+- **Namespace** trennt Umgebungen (`-n kn08`), ohne das laufende KN07 (`default`) zu stören.
+- **ENV aus ConfigMap/Secret** im Deployment:
+```yaml
+env:
+  - name: ACCOUNT_BASE_URL
+    valueFrom: { configMapKeyRef: { name: app-config, key: ACCOUNT_BASE_URL } }
+  - name: ConnectionString
+    valueFrom: { secretKeyRef: { name: account-secret, key: ConnectionString } }
+```
+
+### App-Update – Rolling Update **ohne Downtime** (Stärke von K8s)
+
+1. Code ändern (z. B. Frontend-Titel) → 2. neues **Image bauen & pushen** (`:v2`) → 3. Deployment-YAML aufs neue Image setzen → 4. neu anwenden.
+
+```bash
+kubectl -n kn08 set image deploy/frontend-deployment frontend=<registry>/kn08-frontend:v2
+kubectl -n kn08 rollout status  deploy/frontend-deployment   # Fortschritt
+kubectl -n kn08 rollout history deploy/frontend-deployment   # Revisionen
+kubectl -n kn08 rollout undo    deploy/frontend-deployment   # Rollback
+```
+
+**Strategie `RollingUpdate`** (Default): neue Pods werden **sukzessive** hochgefahren, alte erst beendet, wenn die neuen `Ready` sind (`maxSurge`/`maxUnavailable` je 25 %) → die App ist **nie offline**.
+
+### Multistage-Dockerfile & Laufzeit-Environment (Frontend)
+
+**Multistage** = Bauen und Ausliefern in **getrennten Stages**, im Endimage bleibt nur das Ergebnis (kleines Image, kein manuelles `npm run build`):
+```dockerfile
+FROM node:20-alpine AS build      # Stage 1: bauen
+WORKDIR /app
+COPY app/ ./
+RUN npm install && npm run build
+FROM nginx:alpine                 # Stage 2: ausliefern
+COPY --from=build /app/build/ /usr/share/nginx/html
+```
+
+- **Stolperstein (React-ENV):** CRA-Variablen werden **beim Build** fest in den JS-Code kompiliert → nachträglich nicht änderbar. **Lösung:** in `.env.production` **Platzhalter** setzen und beim **Container-Start** per Skript (`sed` in `/docker-entrypoint.d/`) durch die echten Werte aus der **ConfigMap** ersetzen → **dasselbe Image, andere Config** je Umgebung.
+- Auch in den **eigenen** Services (BuySell/SendReceive) kommt die account-URL aus einer **ENV-Variable** (ConfigMap), nicht hardcodiert.
+
+### LoadBalancer (von NodePort auf LoadBalancer)
+
+Eine einzelne Node-IP aufzurufen ist schlecht (fällt die Instanz aus, ist die App weg) → **externer Load Balancer**. Service-Typ ändern:
+```diff
+- type: NodePort
++ type: LoadBalancer
+```
+- **Stolperstein:** Auf einem **selbst verwalteten** Cluster (MicroK8s **ohne** Cloud-Controller-Manager) kann K8s den ELB **nicht selbst** anlegen → `EXTERNAL-IP` bleibt `<pending>`. Dann den LB **direkt in AWS** erstellen (NLB, Listener → NodePorts) – oder **MetalLB** aktivieren. Bei einem **managed Cluster** (EKS) würde `type: LoadBalancer` den LB automatisch provisionieren.
+
+### Weitere Stolpersteine KN08
+
+- **Container-Registry:** Image **amd64** bauen (Cluster-Nodes sind amd64) und in eine **Registry pushen** (Docker Hub / AWS ECR). Private Registry → **imagePullSecret** nötig.
+- **API-Vertrag genau prüfen (Swagger):** account erwartet `AddCrypto`/`RemoveCrypto` mit **Query-Parametern** (`?userId=&amount=`), **nicht** im JSON-Body – sonst „passiert nichts", obwohl `true` zurückkommt.
+- **CORS:** Da der **Browser** die Services direkt (cross-origin) aufruft, müssen diese `Access-Control-Allow-Origin` setzen – und von aussen erreichbar sein (**NodePort/LoadBalancer**, nicht ClusterIP).
+- **Managed DB (RDS):** MariaDB als AWS-RDS-Dienst; erzwingt oft **TLS** (`require_secure_transport=ON`) → Verbindung mit `--ssl`.
+
+---
+
 ## Merksätze fürs Schnell-Nachschauen
 
 - **`-p` fehlt → Container nicht erreichbar.**
@@ -284,3 +369,9 @@ microk8s kubectl describe service webapp-service # Details eines Service
 - **ClusterIP = nur intern, NodePort = von aussen** (`<node-ip>:<nodePort>`, Firewall öffnen).
 - **Service-Name = interner DNS-Name**; **`replicas`** = Anzahl Pod-Kopien (mehr Replicas → mehr `Endpoints`).
 - **DB gehört in ein StatefulSet + PersistentVolume** (im Demo vereinfacht als Deployment).
+- **Config von aussen:** **ConfigMap** = nicht-geheim, **Secret** = geheim → beide als **ENV** in den Pod (nichts hardcodieren).
+- **Rolling Update = ohne Downtime:** Image neu bauen/pushen → `set image`/`apply` → `rollout status`; Rückzug mit `rollout undo`.
+- **Multistage Dockerfile** = bauen + ausliefern getrennt (kleines Image); **React-ENV** wird beim Build einkompiliert → zur Laufzeit per **Skript + ConfigMap** ersetzen.
+- **`type: LoadBalancer`** bleibt auf selbst verwaltetem Cluster `<pending>` → externen AWS-LB (NLB) oder MetalLB nutzen.
+- **Nur ein Service spricht mit der DB**; die anderen rufen ihn per HTTP-API auf. **Browser-Aufrufe → CORS + NodePort/LoadBalancer** (nicht ClusterIP).
+- **Image immer für die Cluster-Architektur (amd64) bauen** und in eine **Registry** pushen; private Registry → **imagePullSecret**.
